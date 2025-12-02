@@ -7,3 +7,6 @@ edition = "2024"
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
+log = "0.4"
+simple_logger = "5.1"
+clap = { version = "4.5", features = ["derive"] }
