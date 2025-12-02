@@ -504,13 +504,7 @@ where
 }
 
 #[derive(clap::Args, Clone)]
-#[clap(group(
-    clap::ArgGroup::new("source")
-    .required(true)
-    .args(&["command", "file"])))]
 struct Source {
-    #[clap(short, long)]
-    command: bool,
     #[clap(short, long)]
     file: Option<PathBuf>,
 }
@@ -578,13 +572,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // };
     // serde_json::to_writer_pretty(std::io::stdout(), &zfs_spec)?;
 
-    let zfs_list_output: ZfsListOutput = if cli.source.command {
-        ZfsListOutput::from_command::<Vec<_>, String>(None)?
-    } else if let Some(file) = cli.source.file {
+    let zfs_list_output: ZfsListOutput = if let Some(file) = cli.source.file {
         let file = File::open(file)?;
         ZfsListOutput::from_reader(file)?
     } else {
-        unreachable!()
+        ZfsListOutput::from_command::<Vec<_>, String>(None)?
     };
 
     let zfs_spec = {
