@@ -46,7 +46,11 @@ in
           after = [
             "zfs-import.target"
           ];
+
+          serviceConfig.RemainAfterExit = true;
+
           script = ''
+            export PATH="$PATH:/run/booted-system/sw/bin"
             ${lib.getExe cfg.package} --spec ${configFile} apply
           '';
         };
@@ -58,7 +62,15 @@ in
             { name, value }:
             lib.mapAttrsToList (
               dataset: settings: lib.nameValuePair "${name}/${dataset}" { properties = settings.options; }
-            ) value
+            ) (lib.filterAttrs (name: _: name != "__root") value)
+            ++ [
+              {
+                inherit name;
+                value = {
+                  properties = value.__root.options;
+                };
+              }
+            ]
           ))
           lib.flatten
           lib.listToAttrs

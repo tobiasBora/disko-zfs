@@ -154,8 +154,8 @@
                   };
 
                 extraTestScript = ''
-                  machine.succeed("systemctl status zfs-disko.service")
                   machine.wait_for_unit("multi-user.target");
+                  machine.succeed("systemctl status disko-zfs.service")
                 '';
 
                 # testScript =
