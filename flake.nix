@@ -93,142 +93,149 @@
         ];
 
         perSystem =
-          { pkgs, config, ... }:
+          {
+            pkgs,
+            config,
+            system,
+            ...
+          }:
           {
             packages.disko-zfs = pkgs.callPackage ./package.nix { };
             packages.default = config.packages.disko-zfs;
 
-            checks.basic =
-              let
-                diskoLib = import "${inputs.disko}/lib" {
-                  inherit (pkgs) lib;
-                  makeTest = import "${inputs.nixpkgs}/nixos/tests/make-test-python.nix";
-                  eval-config = import "${inputs.nixpkgs}/nixos/lib/eval-config.nix";
-                  qemu-common = import "${inputs.nixpkgs}/nixos/lib/qemu-common.nix";
-                };
-              in
-              diskoLib.testLib.makeDiskoTest {
-                inherit pkgs;
-                name = "basic";
+            checks = lib.mkIf (system == "x86_64-linux") {
+              basic =
+                let
+                  diskoLib = import "${inputs.disko}/lib" {
+                    inherit (pkgs) lib;
+                    makeTest = import "${inputs.nixpkgs}/nixos/tests/make-test-python.nix";
+                    eval-config = import "${inputs.nixpkgs}/nixos/lib/eval-config.nix";
+                    qemu-common = import "${inputs.nixpkgs}/nixos/lib/qemu-common.nix";
+                  };
+                in
+                diskoLib.testLib.makeDiskoTest {
+                  inherit pkgs;
+                  name = "basic";
 
-                disko-config = {
-                  disko.devices = diskoDevices;
-                };
-
-                extraInstallerConfig =
-                  { ... }:
-                  {
-                    networking.hostId = "deadbeef";
-                    boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_12;
+                  disko-config = {
+                    disko.devices = diskoDevices;
                   };
 
-                extraSystemConfig =
-                  { config, pkgs, ... }:
-                  {
-                    imports = [
-                      inputs.self.nixosModules.default
-                    ];
+                  extraInstallerConfig =
+                    { ... }:
+                    {
+                      networking.hostId = "deadbeef";
+                      boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_12;
+                    };
 
-                    disko.zfs.enable = true;
+                  extraSystemConfig =
+                    { config, pkgs, ... }:
+                    {
+                      imports = [
+                        inputs.self.nixosModules.default
+                      ];
 
-                    # virtualisation.directBoot.enable = false;
-                    # virtualisation.mountHostNixStore = false;
-                    # virtualisation.useEFIBoot = true;
-                    # virtualisation.installBootLoader = true;
-                    # virtualisation.useDefaultFilesystems = false;
-                    # virtualisation.fileSystems = lib.mkForce { };
+                      disko.zfs.enable = true;
 
-                    # # config for tests to make them run faster or work at all
-                    # documentation.enable = false;
-                    # hardware.enableAllFirmware = lib.mkForce false;
+                      # virtualisation.directBoot.enable = false;
+                      # virtualisation.mountHostNixStore = false;
+                      # virtualisation.useEFIBoot = true;
+                      # virtualisation.installBootLoader = true;
+                      # virtualisation.useDefaultFilesystems = false;
+                      # virtualisation.fileSystems = lib.mkForce { };
 
-                    # boot.zfs.devNodes = "/dev/disk/by-uuid"; # needed because /dev/disk/by-id is empty in qemu-vms
+                      # # config for tests to make them run faster or work at all
+                      # documentation.enable = false;
+                      # hardware.enableAllFirmware = lib.mkForce false;
 
-                    # boot.loader.systemd-boot.enable = true;
-                    # boot.loader.timeout = 0;
-                    # boot.loader.efi.canTouchEfiVariables = true;
-                    networking.hostId = "deadbeef";
-                    boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_12;
-                    boot.supportedFilesystems = [ "zfs" ];
-                    boot.initrd.systemd.enable = true;
-                  };
+                      # boot.zfs.devNodes = "/dev/disk/by-uuid"; # needed because /dev/disk/by-id is empty in qemu-vms
 
-                extraTestScript = ''
-                  machine.wait_for_unit("multi-user.target");
-                  machine.succeed("systemctl status disko-zfs.service")
-                '';
+                      # boot.loader.systemd-boot.enable = true;
+                      # boot.loader.timeout = 0;
+                      # boot.loader.efi.canTouchEfiVariables = true;
+                      networking.hostId = "deadbeef";
+                      boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_12;
+                      boot.supportedFilesystems = [ "zfs" ];
+                      boot.initrd.systemd.enable = true;
+                    };
 
-                # testScript =
-                #   { nodes, ... }:
-                #   ''
-                #     import shlex
-                #     import shutil
-                #     import tempfile
-                #     import time
+                  extraTestScript = ''
+                    machine.wait_for_unit("multi-user.target");
+                    machine.succeed("systemctl status disko-zfs.service")
+                  '';
 
-                #     tmp_disk_image = tempfile.NamedTemporaryFile()
+                  # testScript =
+                  #   { nodes, ... }:
+                  #   ''
+                  #     import shlex
+                  #     import shutil
+                  #     import tempfile
+                  #     import time
 
-                #     def create_test_machine(
-                #         disk, **kwargs
-                #     ):  # taken from <disko/master/lib/tests.nix>
-                #         # Use qemu-common from nixpkgs to get the proper QEMU binary with correct machine type and flags
-                #         # shlex.split properly handles the command string with options like "-machine virt,gic-version=max"
-                #         start_command = shlex.split("${qemuBinaryString}") + [
-                #             "-m",
-                #             "1024",
-                #             '-drive',
-                #             f"file={disk},id=drive1,if=none,index=1,werror=report,format=${nodes.machine.disko.imageBuilder.imageFormat}",
-                #             '-device',
-                #             "virtio-blk-pci,drive=drive1"
-                #         ]
-                #         ${lib.optionalString true ''
-                #           start_command += ["-drive",
-                #             "if=pflash,format=raw,unit=0,readonly=on,file=${pkgs.OVMF.firmware}",
-                #             "-drive",
-                #             "if=pflash,format=raw,unit=1,readonly=on,file=${pkgs.OVMF.variables}"
-                #           ]
-                #         ''}
-                #         machine = create_machine(start_command=" ".join(start_command), **kwargs)
-                #         driver.machines.append(machine)
-                #         return machine
+                  #     tmp_disk_image = tempfile.NamedTemporaryFile()
 
-                #     shutil.copyfile(
-                #       "${nodes.machine.system.build.diskoImages}/${lib.escapeShellArg nodes.machine.disko.devices.disk.x.imageName}.${nodes.machine.disko.imageBuilder.imageFormat}",
-                #       tmp_disk_image.name,
-                #     )
+                  #     def create_test_machine(
+                  #         disk, **kwargs
+                  #     ):  # taken from <disko/master/lib/tests.nix>
+                  #         # Use qemu-common from nixpkgs to get the proper QEMU binary with correct machine type and flags
+                  #         # shlex.split properly handles the command string with options like "-machine virt,gic-version=max"
+                  #         start_command = shlex.split("${qemuBinaryString}") + [
+                  #             "-m",
+                  #             "1024",
+                  #             '-drive',
+                  #             f"file={disk},id=drive1,if=none,index=1,werror=report,format=${nodes.machine.disko.imageBuilder.imageFormat}",
+                  #             '-device',
+                  #             "virtio-blk-pci,drive=drive1"
+                  #         ]
+                  #         ${lib.optionalString true ''
+                  #           start_command += ["-drive",
+                  #             "if=pflash,format=raw,unit=0,readonly=on,file=${pkgs.OVMF.firmware}",
+                  #             "-drive",
+                  #             "if=pflash,format=raw,unit=1,readonly=on,file=${pkgs.OVMF.variables}"
+                  #           ]
+                  #         ''}
+                  #         machine = create_machine(start_command=" ".join(start_command), **kwargs)
+                  #         driver.machines.append(machine)
+                  #         return machine
 
-                #     machine = create_test_machine(disk=tmp_disk_image.name, name="booted_machine")
+                  #     shutil.copyfile(
+                  #       "${nodes.machine.system.build.diskoImages}/${lib.escapeShellArg nodes.machine.disko.devices.disk.x.imageName}.${nodes.machine.disko.imageBuilder.imageFormat}",
+                  #       tmp_disk_image.name,
+                  #     )
 
-                #     machine.start()
-                #     time.sleep(20)
-                #     print(machine.succeed("systemctl"))
-                #     ${lib.concatMapStringsSep "\n"
-                #       (unit: ''
-                #         print(machine.succeed("systemctl status ${unit}"))
-                #       '')
-                #       [
-                #         "getty@tty1.service"
-                #         "backdoor.service"
-                #         "dhcpcd.service"
-                #         "getty.target"
-                #         "linger-users.service"
-                #         "network-setup.service"
-                #         "nscd.service"
-                #         "reload-systemd-vconsole-setup.service"
-                #         "remote-fs.target"
-                #         "resolvconf.service"
-                #         "systemd-ask-password-wall.path"
-                #         "systemd-logind.service"
-                #         "systemd-modules-load.service"
-                #         "systemd-oomd.service"
-                #         "systemd-sysctl.service"
-                #         "systemd-user-sessions.service"
-                #         "zfs.target"
-                #       ]
-                #     }
-                #     machine.wait_for_unit("multi-user.target")
-                #   '';
-              };
+                  #     machine = create_test_machine(disk=tmp_disk_image.name, name="booted_machine")
+
+                  #     machine.start()
+                  #     time.sleep(20)
+                  #     print(machine.succeed("systemctl"))
+                  #     ${lib.concatMapStringsSep "\n"
+                  #       (unit: ''
+                  #         print(machine.succeed("systemctl status ${unit}"))
+                  #       '')
+                  #       [
+                  #         "getty@tty1.service"
+                  #         "backdoor.service"
+                  #         "dhcpcd.service"
+                  #         "getty.target"
+                  #         "linger-users.service"
+                  #         "network-setup.service"
+                  #         "nscd.service"
+                  #         "reload-systemd-vconsole-setup.service"
+                  #         "remote-fs.target"
+                  #         "resolvconf.service"
+                  #         "systemd-ask-password-wall.path"
+                  #         "systemd-logind.service"
+                  #         "systemd-modules-load.service"
+                  #         "systemd-oomd.service"
+                  #         "systemd-sysctl.service"
+                  #         "systemd-user-sessions.service"
+                  #         "zfs.target"
+                  #       ]
+                  #     }
+                  #     machine.wait_for_unit("multi-user.target")
+                  #   '';
+                };
+            };
           };
 
         flake.nixosModules.default = lib.modules.importApply ./nixos/modules/default.nix {
