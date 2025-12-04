@@ -435,44 +435,6 @@ fn main() -> Result<(), ZfsDiskoError> {
     )
     .unwrap();
 
-    // let zfs_spec = ZfsSpec {
-    //     datasets: vec![
-    //         ZfsSpecDataset::new(
-    //             "zroot/test",
-    //             HashMap::from(
-    //                 [
-    //                     (":test", PropertyValue::new_string("test")),
-    //                     ("recordsize", PropertyValue::new_integer(8192)),
-    //                 ]
-    //                 .map(|(k, v)| (k.to_owned(), v)),
-    //             ),
-    //         ),
-    //         ZfsSpecDataset::new(
-    //             "zroot/test",
-    //             HashMap::from(
-    //                 [
-    //                     (":test", PropertyValue::new_string("test")),
-    //                     ("recordsize", PropertyValue::new_integer(16384)),
-    //                 ]
-    //                 .map(|(k, v)| (k.to_owned(), v)),
-    //             ),
-    //         ),
-    //         ZfsSpecDataset::new(
-    //             "zroot/ds1/persist/var/lib/postgresql",
-    //             HashMap::from(
-    //                 [
-    //                     (":test", PropertyValue::new_string("test")),
-    //                     ("recordsize", PropertyValue::new_integer(16384)),
-    //                     ("compressratio", PropertyValue::new_string("2.0")),
-    //                 ]
-    //                 .map(|(k, v)| (k.to_owned(), v)),
-    //             ),
-    //         ),
-    //         ZfsSpecDataset::new("zroot/test/test", HashMap::<String, _>::new()),
-    //     ],
-    // };
-    // serde_json::to_writer_pretty(std::io::stdout(), &zfs_spec)?;
-
     let zfs_list_output: ZfsList = if let Some(file) = cli.source.file {
         let file = File::open(file).map_err(ZfsDiskoError::ZFSOutputNotFound)?;
         ZfsList::from_reader(file).map_err(ZfsDiskoError::InvalidZFSOutput)?
