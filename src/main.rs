@@ -1,3 +1,4 @@
+use log::{Level, LevelFilter};
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -362,6 +363,8 @@ struct Source {
 struct Cli {
     #[clap(flatten)]
     source: Source,
+    #[arg(long = "log-level")]
+    log_level: Option<Level>,
     #[command(subcommand)]
     command: Commands,
 }
@@ -421,7 +424,17 @@ fn get_actions(
 fn main() -> Result<(), ZfsDiskoError> {
     let cli = Cli::parse();
 
-    simple_logger::SimpleLogger::new().env().init().unwrap();
+    simple_logger::init_with_level(
+        cli.log_level
+            .or_else(|| {
+                std::env::var("RUST_LOG")
+                    .ok()
+                    .and_then(|l| Level::from_str(&l).ok())
+            })
+            .unwrap_or(Level::Info),
+    )
+    .unwrap();
+
     // let zfs_spec = ZfsSpec {
     //     datasets: vec![
     //         ZfsSpecDataset::new(
