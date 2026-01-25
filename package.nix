@@ -6,7 +6,7 @@
 
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "disko-zfs";
-  version = "unknown";
+  inherit ((lib.importTOML ./Cargo.toml).package) version;
 
   src = lib.fileset.toSource {
     root = ./.;
