@@ -4,14 +4,14 @@
 
 ## Getting Started
 
-First you have add this flake as a flake input:
+First you have to add this flake as a flake input:
 
 ```nix
 inputs = {
   # other inputs ...
 
   disko-zfs = {
-    url = "https://git.numtide.com/magic_rb/disko-zfs/archive/main.tar.gz";
+    url = "github:numtide/disko-zfs";
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.flake-parts.follows = "flake-parts";
     inputs.disko.follows = "disko";
@@ -19,14 +19,14 @@ inputs = {
 };
 ```
 
-Next you need to add the `diskoZfs` module to your NixOS configuration, how spefically you need to do that is highly dependant, but in the most basic case something like the following should suffice:
+Next you need to add the `diskoZfs` module to your NixOS configuration. How spefically you need to do that is highly dependant, but in the most basic case something like the following should suffice:
 
 ```nix
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
 
-    disko-zfs.url = "https://git.numtide.com/magic_rb/disko-zfs/archive/main.tar.gz";
+    disko-zfs.url = "github:numtide/disko-zfs";
   };
 
   outputs = { nixpkgs, disko-zfs, ...}:
